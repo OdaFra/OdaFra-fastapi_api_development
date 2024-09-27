@@ -67,7 +67,7 @@ def get_post(id: int, response: Response):
 # Delete post
 @app.delete(
     "/posts/{id}",
-    status_code=status.HTTP_204_NO_CONTENT,
+    status_code=status.HTTP_202_ACCEPTED
 )
 def delete_post(id: int):
     # deleting post
@@ -81,5 +81,20 @@ def delete_post(id: int):
         )
     my_posts.pop(index)
     # return Response(status_code=status.HTTP_204_NO_CONTENT)
-    return {"message": f"Post with id: {id} deleted successfully"}, status.HTTP_202_ACCEPTED
+    return {"message": f"Post with id: {id} deleted successfully"}, 
 
+
+@app.put('/posts/{id}')
+def update_post(id:int, post:Post):
+    print(Post)
+    index = find_index_post(id)
+    if index is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"post with id: {id} does not exist",
+        )
+    post_dic = post.model_dump()
+    post_dic['id']= id
+    my_posts[index]= post_dic
+    return {'data':f'Update Post:{post_dic}'}
+    
