@@ -1,3 +1,7 @@
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import time
+
 from random import randrange
 from fastapi import FastAPI, Response, status, HTTPException
 from fastapi.params import Body
@@ -5,7 +9,27 @@ from models.post import Post
 from utils.posts import my_posts, find_post, find_index_post
 
 
+
+
 app = FastAPI()
+
+TODO: ''''# Refactorizar para agregar por modulo y mantener su env'''''
+while True:
+    try:
+        conn = psycopg2.connect(
+            host="localhost",
+            database="fastapi",
+            user="postgres",
+            password="123456",
+            cursor_factory=RealDictCursor,
+        )
+        cursor = conn.cursor()
+        print(f"Database connection was successfull {cursor}!!")
+        break
+    except Exception as error:
+        print("Connecting to database failed")
+        print(f"An exception occurred {error}")
+        time.sleep(2)
 
 
 @app.get("/")
@@ -65,10 +89,7 @@ def get_post(id: int, response: Response):
 
 
 # Delete post
-@app.delete(
-    "/posts/{id}",
-    status_code=status.HTTP_202_ACCEPTED
-)
+@app.delete("/posts/{id}", status_code=status.HTTP_202_ACCEPTED)
 def delete_post(id: int):
     # deleting post
     # finde the index int the array that has required ID
@@ -81,11 +102,11 @@ def delete_post(id: int):
         )
     my_posts.pop(index)
     # return Response(status_code=status.HTTP_204_NO_CONTENT)
-    return {"message": f"Post with id: {id} deleted successfully"}, 
+    return ({"message": f"Post with id: {id} deleted successfully"},)
 
 
-@app.put('/posts/{id}')
-def update_post(id:int, post:Post):
+@app.put("/posts/{id}")
+def update_post(id: int, post: Post):
     print(Post)
     index = find_index_post(id)
     if index is None:
@@ -94,7 +115,6 @@ def update_post(id:int, post:Post):
             detail=f"post with id: {id} does not exist",
         )
     post_dic = post.model_dump()
-    post_dic['id']= id
-    my_posts[index]= post_dic
-    return {'data':f'Update Post:{post_dic}'}
-    
+    post_dic["id"] = id
+    my_posts[index] = post_dic
+    return {"data": f"Update Post:{post_dic}"}
