@@ -9,11 +9,9 @@ from models.post import Post
 from utils.posts import my_posts, find_post, find_index_post
 
 
-
-
 app = FastAPI()
 
-TODO: ''''# Refactorizar para agregar por modulo y mantener su env'''''
+TODO: """'# Refactorizar para agregar por modulo y mantener su env""" ""
 while True:
     try:
         conn = psycopg2.connect(
@@ -40,7 +38,15 @@ def get_user():
 # Get all posts
 @app.get("/posts")
 def get_posts():
-    return {"data": my_posts}
+    cursor.execute(
+        """
+                    Select * From posts
+                   """
+    )
+    posts = cursor.fetchall()
+
+    print(posts)
+    return {"data": posts}
 
 
 # @app.post("/createposts")
@@ -50,38 +56,59 @@ def get_posts():
 
 
 # Create Post
-@app.post(
-    "/posts",
-    status_code=status.HTTP_201_CREATED,
-)
+@app.post("/posts", status_code=status.HTTP_201_CREATED)
 def create_post(post: Post):
     print(f"This is body:{post}")
-
-    post_dic = post.model_dump()
-    post_dic["id"] = randrange(0, 100000)
-    my_posts.append(post_dic)
-    print(f"This is dic: {post_dic}")
-    return {"data": post_dic}
+    # post_dic = post.model_dump()
+    # post_dic["id"] = randrange(0, 100000)
+    # my_posts.append(post_dic)
+    cursor.execute(
+        """
+                    INSERT INTO posts( title, content, published)
+                    values (%s, %s, %s) RETURNING *
+                   """,
+        (
+            post.title,
+            post.content,
+            post.published,
+        ),
+    )
+    new_post = cursor.fetchone()
+    conn.commit()
+    print(f"This is dic: {new_post}")
+    return {"data": f"created post: {new_post}"}
 
 
 # Get latest post
 @app.get("/posts/latest")
 def get_latest_post():
-    post = my_posts[len(my_posts) - 1]
+    cursor.execute(
+        """
+                    Select * From posts
+                   """
+    )
+    posts = cursor.fetchall()
+    post = posts[len(posts) - 1]
     return post
 
 
 # Get post for id
 @app.get("/posts/{id}")
 def get_post(id: int, response: Response):
-    post = find_post(id)
+    cursor.execute(
+        """
+                   Select * from posts where id = %s
+                   """,
+        (str(id),),
+    )
+    post = cursor.fetchone()
+    # post = find_post(id)
     if not post:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"message": f"post with id: {id} was not found"},
         )
-        # response.status_code= status.HTTP_404_NOT_FOUND
-        # return {'message': f'post with id: {id} was not found'}
+
     print(f"This is post id {post}")
     return {
         "post_detail": post,
