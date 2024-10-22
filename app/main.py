@@ -118,16 +118,21 @@ def get_post(id: int, response: Response):
 # Delete post
 @app.delete("/posts/{id}", status_code=status.HTTP_202_ACCEPTED)
 def delete_post(id: int):
-    # deleting post
-    # finde the index int the array that has required ID
-    # my_posts.pop(index)
-    index = find_index_post(id)
-    if index is None:
+    cursor.execute(
+        """
+            Delete from posts where id = %s returning*
+        """,
+        (str(id),),
+    )
+    deleted_post=cursor.fetchone()
+    conn.commit()
+    # index = find_index_post(id)
+    if deleted_post is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"post with id: {id} does not exist",
         )
-    my_posts.pop(index)
+    # my_posts.pop(index)
     # return Response(status_code=status.HTTP_204_NO_CONTENT)
     return ({"message": f"Post with id: {id} deleted successfully"},)
 
