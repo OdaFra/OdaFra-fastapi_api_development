@@ -1,3 +1,4 @@
+import json
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
@@ -75,8 +76,8 @@ def create_post(post: Post):
     )
     new_post = cursor.fetchone()
     conn.commit()
-    print(f"This is dic: {new_post}")
-    return {"data": f"created post: {new_post}"}
+    print(f"This is dic: {json.dumps(new_post, indent=5, default=str)}")
+    return {"message": "created post", "data": new_post}
 
 
 # Get latest post
@@ -124,7 +125,7 @@ def delete_post(id: int):
         """,
         (str(id),),
     )
-    deleted_post=cursor.fetchone()
+    deleted_post = cursor.fetchone()
     conn.commit()
     # index = find_index_post(id)
     if deleted_post is None:
@@ -139,14 +140,23 @@ def delete_post(id: int):
 
 @app.put("/posts/{id}")
 def update_post(id: int, post: Post):
-    print(Post)
-    index = find_index_post(id)
-    if index is None:
+    cursor.execute(
+        """
+        UPDATE posts SET title = %s, content = %s, published = %s Where id = %s RETURNING *
+        """, (post.title, post.content, post.published, str(id))
+    )
+    
+    updated_post = cursor.fetchone()
+    conn.commit()
+    print(f"This is dic: {json.dumps(updated_post, indent=5, default=str)}")
+
+    #index = find_index_post(id)
+    if updated_post == None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"post with id: {id} does not exist",
         )
     post_dic = post.model_dump()
-    post_dic["id"] = id
-    my_posts[index] = post_dic
-    return {"data": f"Update Post:{post_dic}"}
+    # post_dic["id"] = id
+    # my_posts[index] = post_dic
+    return { "message":"Update Post", "data": post_dic}
