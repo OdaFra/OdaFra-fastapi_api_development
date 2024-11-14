@@ -3,14 +3,25 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
 
-from random import randrange
-from fastapi import FastAPI, Response, status, HTTPException
-from fastapi.params import Body
-from models.post import Post
-from utils.posts import my_posts, find_post, find_index_post
 
+from fastapi import FastAPI, Response, status, HTTPException, Depends
+from sqlalchemy.orm import Session
+from models.post import Post
+from db.models.posts import Posts
+from db.connection import engine, SessionLocal, Base
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 
 TODO: """'# Refactorizar para agregar por modulo y mantener su env""" ""
 while True:
@@ -35,17 +46,20 @@ while True:
 def get_user():
     return {"Hello": "Mundo!!!"}
 
+@app.get('/sqlalchemy')
+def test_posts(db:Session =Depends(get_db)):
+    posts = db.query(Posts).all()
+    return {'status':"success",
+            "data": posts
+            }
+
 
 # Get all posts
 @app.get("/posts")
-def get_posts():
-    cursor.execute(
-        """
-                    Select * From posts
-                   """
-    )
-    posts = cursor.fetchall()
-
+def get_posts(db:Session = Depends(get_db)):
+    # cursor.execute("""Select * From posts""")
+    # posts = cursor.fetchall()
+    posts=db.query(Posts).all()
     print(posts)
     return {"data": posts}
 
