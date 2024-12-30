@@ -14,13 +14,13 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
-
 
 
 TODO: """'# Refactorizar para agregar por modulo y mantener su env""" ""
@@ -46,20 +46,19 @@ while True:
 def get_user():
     return {"Hello": "Mundo!!!"}
 
-@app.get('/sqlalchemy')
-def test_posts(db:Session =Depends(get_db)):
-    posts = db.query(Posts).all()
-    return {'status':"success",
-            "data": posts
-            }
+
+# @app.get("/sqlalchemy")
+# def test_posts(db: Session = Depends(get_db)):
+#     posts = db.query(Posts).all()
+#     return {"status": "success", "data": posts}
 
 
 # Get all posts
 @app.get("/posts")
-def get_posts(db:Session = Depends(get_db)):
+def get_posts(db: Session = Depends(get_db)):
     # cursor.execute("""Select * From posts""")
     # posts = cursor.fetchall()
-    posts=db.query(Posts).all()
+    posts = db.query(Posts).all()
     print(posts)
     return {"data": posts}
 
@@ -72,25 +71,23 @@ def get_posts(db:Session = Depends(get_db)):
 
 # Create Post
 @app.post("/posts", status_code=status.HTTP_201_CREATED)
-def create_post(post: Post):
+def create_post(post: Post, db: Session=Depends(get_db)):
     print(f"This is body:{post}")
     # post_dic = post.model_dump()
     # post_dic["id"] = randrange(0, 100000)
     # my_posts.append(post_dic)
-    cursor.execute(
-        """
-                    INSERT INTO posts( title, content, published)
-                    values (%s, %s, %s) RETURNING *
-                   """,
-        (
-            post.title,
-            post.content,
-            post.published,
-        ),
-    )
-    new_post = cursor.fetchone()
-    conn.commit()
-    print(f"This is dic: {json.dumps(new_post, indent=5, default=str)}")
+    # cursor.execute(
+    #     """INSERT INTO posts( title, content, published) values (%s, %s, %s) RETURNING *
+    #                """(post.title, post.content, post.published),
+    # )
+    # new_post = cursor.fetchone()
+    # conn.commit()
+    #print(f"This is dic: {json.dumps(new_post, indent=5, default=str)}")
+    new_post = Posts(title=post.title, content=post.content, published=post.published)
+    db.add(new_post)
+    db.commit()
+    db.refresh(new_post)
+    
     return {"message": "created post", "data": new_post}
 
 
@@ -157,14 +154,15 @@ def update_post(id: int, post: Post):
     cursor.execute(
         """
         UPDATE posts SET title = %s, content = %s, published = %s Where id = %s RETURNING *
-        """, (post.title, post.content, post.published, str(id))
+        """,
+        (post.title, post.content, post.published, str(id)),
     )
-    
+
     updated_post = cursor.fetchone()
     conn.commit()
     print(f"This is dic: {json.dumps(updated_post, indent=5, default=str)}")
 
-    #index = find_index_post(id)
+    # index = find_index_post(id)
     if updated_post == None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -173,4 +171,4 @@ def update_post(id: int, post: Post):
     post_dic = post.model_dump()
     # post_dic["id"] = id
     # my_posts[index] = post_dic
-    return { "message":"Update Post", "data": post_dic}
+    return {"message": "Update Post", "data": post_dic}
